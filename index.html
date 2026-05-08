@@ -1,8 +1,7 @@
-```html id="0lh4mb"
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Hand Flower</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
@@ -18,9 +17,11 @@
     body{
       background:#000;
       display:flex;
+      flex-direction:column;
       justify-content:center;
       align-items:center;
       height:100vh;
+      gap:12px;
       font-family:sans-serif;
     }
 
@@ -38,22 +39,22 @@
 
     canvas{
       position:absolute;
-      inset:0;
+      top:0;
+      left:0;
       width:640px;
       height:480px;
     }
 
     /* overlay */
-
     #overlay{
       position:absolute;
       inset:0;
       display:flex;
       flex-direction:column;
-      justify-content:center;
       align-items:center;
-      gap:14px;
+      justify-content:center;
       background:rgba(0,0,0,0.88);
+      gap:14px;
       z-index:10;
     }
 
@@ -73,18 +74,21 @@
       font-size:15px;
       cursor:pointer;
       font-weight:600;
+      opacity:0.4;
+      pointer-events:none;
+      transition:opacity .2s;
+    }
 
-      /* LANGSUNG AKTIF */
+    #btn.ready{
       opacity:1;
       pointer-events:all;
     }
 
     #info{
       position:absolute;
+      bottom:12px;
       left:12px;
       right:12px;
-      bottom:12px;
-
       display:none;
       justify-content:space-between;
       pointer-events:none;
@@ -103,14 +107,11 @@
       top:10px;
       left:50%;
       transform:translateX(-50%);
-
       background:rgba(0,0,0,0.5);
       color:#fff;
-
       font-size:12px;
       padding:4px 14px;
       border-radius:20px;
-
       display:none;
       white-space:nowrap;
     }
@@ -131,41 +132,21 @@
     <div style="font-size:40px">🌸</div>
 
     <p>
-      <b style="color:#b8e4ff">
-        ✋ Tangan Kiri
-      </b>
-      — Buka → Ranting Tumbuh
-      <br>
-
-      <b style="color:#ffb8d4">
-        🤚 Tangan Kanan
-      </b>
-      — Buka → Bunga Mekar
+      <b style="color:#b8e4ff">✋ Tangan Kiri</b> — Buka → Ranting Tumbuh<br>
+      <b style="color:#ffb8d4">🤚 Tangan Kanan</b> — Buka → Bunga Mekar
     </p>
 
-    <div
-      id="loadingMsg"
-      style="
-        color:#888;
-        font-size:12px;
-        min-height:18px;
-      "
-    ></div>
+    <div id="loadingMsg"
+         style="color:#888;font-size:12px;min-height:18px;">
+    </div>
 
-    <button id="btn">
-      Aktifkan Kamera
-    </button>
+    <button id="btn">Aktifkan Kamera</button>
 
   </div>
 
   <div id="info">
-    <span style="color:#b8e4ff">
-      left hand: twigs
-    </span>
-
-    <span style="color:#ffb8d4">
-      right hand: flower
-    </span>
+    <span style="color:#b8e4ff">left hand: twigs</span>
+    <span style="color:#ffb8d4">right hand: flower</span>
   </div>
 
   <div id="status"></div>
@@ -174,29 +155,15 @@
 
 <script>
 
-  const video =
-    document.getElementById('video');
+  const video    = document.getElementById('video');
+  const canvas   = document.getElementById('canvas');
+  const ctx      = canvas.getContext('2d');
 
-  const canvas =
-    document.getElementById('canvas');
-
-  const ctx =
-    canvas.getContext('2d');
-
-  const overlay =
-    document.getElementById('overlay');
-
-  const info =
-    document.getElementById('info');
-
-  const statusEl =
-    document.getElementById('status');
-
-  const loadMsg =
-    document.getElementById('loadingMsg');
-
-  const btn =
-    document.getElementById('btn');
+  const overlay  = document.getElementById('overlay');
+  const info     = document.getElementById('info');
+  const statusEl = document.getElementById('status');
+  const loadMsg  = document.getElementById('loadingMsg');
+  const btn      = document.getElementById('btn');
 
   let hasilTangan  = null;
   let tick         = 0;
@@ -208,12 +175,17 @@
   let ujungCabang  = [];
 
   /* =========================
-     FOTO CUSTOM
+     FOTO BUNGA CUSTOM
   ========================= */
 
   let fotoBunga = new Image();
 
   fotoBunga.src = "https://cdn.corenexis.com/files/c/8616464720.png";
+  // ganti sesuai nama/path image lo
+
+  fotoBunga.onload = () => {
+    btn.classList.add('ready');
+  };
 
   /* ========================= */
 
@@ -221,18 +193,16 @@
   const POHON_Y = 480;
 
   /* =========================
-     START CAMERA
+     TOMBOL START
   ========================= */
 
   btn.onclick = function(){
 
     loadMsg.textContent =
-      'Memuat model AI...';
+      'Memuat model AI... tunggu ~10 detik';
 
     this.disabled = true;
-
-    this.textContent =
-      'Memuat...';
+    this.textContent = 'Memuat...';
 
     mulaiTracking();
   };
@@ -260,12 +230,8 @@
     });
 
     const camera = new Camera(video,{
-
       onFrame:async()=>{
-
-        await hands.send({
-          image:video
-        });
+        await hands.send({ image:video });
 
         gambarFrame();
 
@@ -276,29 +242,21 @@
       height:480
     });
 
-    camera.start()
+    camera.start().then(()=>{
 
-    .then(()=>{
-
-      overlay.style.display = 'none';
-
-      info.style.display = 'flex';
-
-      statusEl.style.display =
-        'block';
+      overlay.style.display  = 'none';
+      info.style.display     = 'flex';
+      statusEl.style.display = 'block';
 
       inisialisasiPohon();
-    })
 
-    .catch(err=>{
+    }).catch(err=>{
 
       loadMsg.textContent =
         'Error: ' + err.message;
 
       btn.disabled = false;
-
-      btn.textContent =
-        'Coba Lagi';
+      btn.textContent = 'Coba Lagi';
     });
   }
 
@@ -328,18 +286,13 @@
     depth
   ){
 
-    if(
-      depth > 4 ||
-      panjang < 12
-    ) return;
+    if(depth > 4 || panjang < 12) return;
 
     const x2 =
-      x1 +
-      Math.cos(sudut) * panjang;
+      x1 + Math.cos(sudut) * panjang;
 
     const y2 =
-      y1 +
-      Math.sin(sudut) * panjang;
+      y1 + Math.sin(sudut) * panjang;
 
     const node = {
       x1,
@@ -390,12 +343,10 @@
   }
 
   /* =========================
-     DETEKSI
+     DETEKSI JARAK
   ========================= */
 
-  function jarakJempolTelunjuk(
-    tangan
-  ){
+  function jarakJempolTelunjuk(tangan){
 
     const j = tangan[4];
     const t = tangan[8];
@@ -421,13 +372,12 @@
       1,
       Math.max(
         0,
-        (jarak / skala - 0.1)
-        / 0.75
+        (jarak / skala - 0.1) / 0.75
       )
     );
   }
 
-  function lm(tangan,i){
+  function lm(tangan, i){
 
     return{
       x:(1 - tangan[i].x) * 640,
@@ -436,7 +386,7 @@
   }
 
   /* =========================
-     TRACKER
+     TRACKER VISUAL
   ========================= */
 
   function gambarTracker(
@@ -445,11 +395,8 @@
     nilai
   ){
 
-    const jempol =
-      lm(tangan,4);
-
-    const telunjuk =
-      lm(tangan,8);
+    const jempol   = lm(tangan,4);
+    const telunjuk = lm(tangan,8);
 
     const mx =
       (jempol.x + telunjuk.x) / 2;
@@ -458,7 +405,6 @@
       (jempol.y + telunjuk.y) / 2;
 
     /* garis */
-
     ctx.save();
 
     ctx.setLineDash([5,5]);
@@ -473,22 +419,14 @@
 
     ctx.beginPath();
 
-    ctx.moveTo(
-      jempol.x,
-      jempol.y
-    );
-
-    ctx.lineTo(
-      telunjuk.x,
-      telunjuk.y
-    );
+    ctx.moveTo(jempol.x,jempol.y);
+    ctx.lineTo(telunjuk.x,telunjuk.y);
 
     ctx.stroke();
 
     ctx.restore();
 
     /* titik */
-
     [jempol,telunjuk].forEach(p=>{
 
       ctx.save();
@@ -501,22 +439,13 @@
       ctx.globalAlpha = 0.95;
 
       ctx.beginPath();
-
-      ctx.arc(
-        p.x,
-        p.y,
-        5,
-        0,
-        Math.PI * 2
-      );
-
+      ctx.arc(p.x,p.y,5,0,Math.PI*2);
       ctx.fill();
 
       ctx.restore();
     });
 
     /* persen */
-
     const persen =
       Math.round(nilai * 100);
 
@@ -525,7 +454,7 @@
     ctx.font =
       'bold 12px sans-serif';
 
-    ctx.textAlign = 'center';
+    ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
 
     const tw =
@@ -563,15 +492,14 @@
 
     ctx.restore();
 
-    /* bar */
-
+    /* progress */
     const bx = mx - 30;
     const by = my + 16;
 
     ctx.save();
 
     ctx.globalAlpha = 0.4;
-    ctx.fillStyle = '#444';
+    ctx.fillStyle   = '#444';
 
     roundRect(
       ctx,
@@ -586,8 +514,7 @@
 
     ctx.globalAlpha = 0.95;
 
-    ctx.fillStyle = warna;
-
+    ctx.fillStyle   = warna;
     ctx.shadowColor = warna;
     ctx.shadowBlur  = 8;
 
@@ -661,7 +588,7 @@
   }
 
   /* =========================
-     LOOP
+     LOOP UTAMA
   ========================= */
 
   function gambarFrame(){
@@ -693,16 +620,15 @@
     let bukaKiri  = 0;
     let bukaKanan = 0;
 
-    let rawKiri  = null;
-    let rawKanan = null;
+    let rawKiri   = null;
+    let rawKanan  = null;
 
     if(
       hasilTangan &&
       hasilTangan.multiHandLandmarks
     ){
 
-      hasilTangan
-      .multiHandLandmarks
+      hasilTangan.multiHandLandmarks
       .forEach((tangan,i)=>{
 
         const label =
@@ -713,18 +639,14 @@
         if(label === 'Right'){
 
           bukaKiri =
-            jarakJempolTelunjuk(
-              tangan
-            );
+            jarakJempolTelunjuk(tangan);
 
           rawKiri = tangan;
 
         }else{
 
           bukaKanan =
-            jarakJempolTelunjuk(
-              tangan
-            );
+            jarakJempolTelunjuk(tangan);
 
           rawKanan = tangan;
         }
@@ -780,7 +702,7 @@
   }
 
   /* =========================
-     RANTING
+     RENDER RANTING
   ========================= */
 
   function gambarPohon(){
@@ -799,8 +721,7 @@
           0,
           (
             nilaiRanting - mulai
-          ) /
-          (
+          ) / (
             selesai - mulai
           )
         )
@@ -829,16 +750,13 @@
           (5 - node.depth)
         );
 
-      ctx.lineCap =
-        'round';
+      ctx.lineCap = 'round';
 
       ctx.shadowColor =
         'rgba(140,190,255,0.7)';
 
       ctx.shadowBlur =
-        node.depth < 2
-        ? 8
-        : 3;
+        node.depth < 2 ? 8 : 3;
 
       ctx.beginPath();
 
@@ -875,8 +793,7 @@
           0,
           (
             nilaiRanting - mulai
-          ) /
-          (
+          ) / (
             selesai - mulai
           )
         )
@@ -895,23 +812,20 @@
       const delay =
         (i % ujungCabang.length)
         * (
-          0.5 /
-          ujungCabang.length
+          0.5 / ujungCabang.length
         );
 
-      const bloom =
-        Math.min(
-          1,
-          Math.max(
-            0,
-            (
-              nilaiBunga - delay
-            ) /
-            (
-              1 - delay + 0.001
-            )
+      const bloom = Math.min(
+        1,
+        Math.max(
+          0,
+          (
+            nilaiBunga - delay
+          ) / (
+            1 - delay + 0.001
           )
-        );
+        )
+      );
 
       gambarFotoBunga(
         cx,
@@ -956,6 +870,7 @@
 
     ctx.rotate(rotasi);
 
+    /* lingkaran */
     ctx.beginPath();
 
     ctx.arc(
@@ -979,7 +894,6 @@
     ctx.restore();
 
     /* glow */
-
     ctx.save();
 
     ctx.globalAlpha =
@@ -995,15 +909,8 @@
         ukuran * 0.8
       );
 
-    grad.addColorStop(
-      0,
-      '#ffccdd'
-    );
-
-    grad.addColorStop(
-      1,
-      'transparent'
-    );
+    grad.addColorStop(0,'#ffccdd');
+    grad.addColorStop(1,'transparent');
 
     ctx.fillStyle = grad;
 
@@ -1026,4 +933,3 @@
 
 </body>
 </html>
-```
